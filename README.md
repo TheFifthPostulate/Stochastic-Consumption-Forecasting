@@ -1,16 +1,16 @@
-# Decision-Aware Stochastic Forecasting for Small High-cost Inventory Under Covariate Scarcity
+# Decision-Aware Stochastic Consumption Forecasting Under Covariate Scarcity
 
-This project explores Bayesian forecasting of small, high-variance inventory data based on a biotech QC environment. Weekly usage is modeled using Poisson–Gamma conjugacy, resulting in a Negative Binomial posterior predictive distribution scaled by forecast horizon.
+This project explores stochastic inventory forecasting under severe covariate scarcity using Poisson–Gamma conjugacy and a waste-constrained restocking policy.
 
-Project URL: https://thefifthpostulate.github.io/Stochastic-Consumption-Forecasting/InventoryProject.html
+A concise methods note summarizing the modeling approach, decision logic, and empirical findings is available here:
 
-The analysis includes:
-- Feature engineering from raw inventory records
-- Posterior predictive forecasting across rolling windows
-- Residual analysis and posterior diagnostics
-- Visualization of high-error cases to assess model failure modes
+**[Download PDF: Decision-Aware Stochastic Consumption Forecasting Under Covariate Scarcity](methods_note_jprakash_jan2026.pdf)**
 
-**Key finding:**  
-Despite theoretically appropriate modeling, posterior uncertainty remains high due to context-dependent usage patterns. The analysis demonstrates that some operational processes are not well-suited for automated forecasting and are better managed through expert oversight.
+The full reproducible analysis, figures, and diagnostics are available in the notebook:
 
-This project emphasizes model diagnostics, uncertainty interpretation, and decision relevance over point-estimate accuracy.
+**[View Notebook (HTML)](https://thefifthpostulate.github.io/Stochastic-Consumption-Forecasting/InventoryProject.html)**
+
+Key takeaways:
+- Uncertainty modeling revealed structural complexity in real consumption processes.
+- Model and decision-rule assumptions were insufficient for consistent decision-grade forecasting.
+- Expert oversight and communication outperformed automated inventory control under nonstationarity.
