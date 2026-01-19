@@ -1,5 +1,5 @@
 
-# Decision-Aware Dtochastic Forecasting for Materials Inventory Under Covariate Scarcity
+# Decision-Aware Stochastic Forecasting for Small High-cost Inventory Under Covariate Scarcity
 
 
 ####    Jithakrishna Prakash   |   jprakashoff@gmail.com   |   [linkedin.com/in/jithakrishna-prakash/](https://www.linkedin.com/in/jithakrishna-prakash/)
