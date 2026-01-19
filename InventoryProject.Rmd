@@ -1,12 +1,12 @@
 
-# Bayesian Forecasting of Small Inventory data
+# Decision-Aware Dtochastic Forecasting for Materials Inventory Under Covariate Scarcity
 
 
 ####    Jithakrishna Prakash   |   jprakashoff@gmail.com   |   [linkedin.com/in/jithakrishna-prakash/](https://www.linkedin.com/in/jithakrishna-prakash/)
 
 ***
 
-This project started as a personal exploration of the question "can I make forecasts with no predictor variables and based on modeling just the underlying stochastic process?". I wanted to forecast demand for a small inventory data that I  kept track of in my QC role. In this inventory data, there were no covariates available other than the date of inventory. In this project, I have used **Poisson-Gamma Mix Model** to attempt to model the stochastic process underlying the inventory data. I have used mock inventory data that mimics the actual data I encountered in my QC role. I have also masked sensitive information such as material names and expiry dates.
+This project involves forecasting demand for small inventory data using stochastic consumption patterns under lack of covariates. Stochastic modeling of demand was performed using **Poisson-Gamma Conjugate Model** Mock inventory data inspired from real-world biotech QC inventories is used in this analysis. Sensitive information such as material name and expiries have been masked.
 
 The potential benefits of this analysis were:
 
@@ -17,33 +17,47 @@ The potential benefits of this analysis were:
 
 # Stochastic Process
 
-Bayesian analysis involves representing a stochastic process (random process) using known probability distributions called likelihood functions. Typically, these likelihood functions will need parameter values to work. We usually start with a range of values/a probability distribution for these parameter(s), called priors. Then we will obtain a new distribution called the posterior probability distribution by combining the likelihood and the prior using the Bayes Theorem. The posterior probability distribution will then be representative of the possible values of the random variable ranked by plausibility.
+Bayesian analysis involves representing a stochastic process (random process) using known probability distributions called likelihood functions. Typically, these likelihood functions will need parameter values to work. We usually start with a range of values, or a probability distribution, for these parameter(s), called priors. Then we will obtain a new distribution called the posterior probability distribution by combining the likelihood and the prior based on the Bayes Theorem. The posterior probability distribution will then be representative of the possible values of the random variable ranked by plausibility.
 
 In this case, the nature of my inventory data is **Count Data**. Count data is fundamentally modeled using the **Poisson Distribution** as the likelihood function:
 
-PMF: P(x; lambda) ~ lambda^x * exp(-lambda) / factorial(x)
+$P(x~|~\lambda) = \frac{\lambda^x} {x!} ~ e^{-\lambda}$
 
-where x is the count for one time period, lambda is the rate for one time period. In this problem, lambda is the daily usage which is assumed to be constant for a given week and the counts produced are weekly. 
+where $x$ is the count for one time period, $\lambda$ is the rate for one time period. In this problem, $\lambda$ is the daily usage which is assumed to be constant for a given week and the counts produced are weekly. 
 
-However, the underlying usage changes every week. So, lambda is assumed to follow the **Gamma Distribution**:
+However, the underlying usage changes every week. So, $\lambda$ is assumed to follow the **Gamma Distribution**:
 
-PDF: p(x; a, b) ~ b^a * x^(a-1) * exp(-lambda * x) / gamma(a)
+$p(\lambda~|~shape = a,~rate = b) = \frac {b^a} {\Gamma(a)} ~ \lambda^{(a~-~1)} ~ e^{-b\lambda}$
 
-where a is the size parameter and b is the rate parameter.
+where $a$ is the shape parameter and $b$ is the rate parameter.
 
 Here, the Gamma Distribution is the **prior** we assume for the lambda parameter of the Poisson likelihood.
 
-Applying Bayes Theorem over Poisson Likelihood and Gamma Prior will result in a **closed-form expression** for the **Posterior Probability Distribution**, which is the **Negative Binomial Distribution** PMF: NegBinom(x; a, b/(1 + b)). 
+With a Poisson Likelihood and Gamma Prior we obtain a **closed-form expression** for the **Posterior Predictive Distribution** of consumption $Y$, which is the **Negative Binomial Distribution**: 
 
-This is the posterior probability distribution for one occurrence in the time scale of lambda, which is **one day**. We assume that for k days, parameters a and b of the gamma prior do not change. Following this, to forecast consumption over a horizon of k days, we exploit a key property of Poisson processes: **counts scale linearly with exposure time**. If daily usage follows a Poisson process with rate lambda, then the total count over k days follows a Poisson distribution with mean lambda * k. However, the variability of lambda is already captured by the gamma prior. 
+$Y \sim NegBinom(x~|~size = a,~prob = \frac {b} {1 ~+~ b})$ 
 
-This allows the posterior distribution to be extended to k days by NegBinom(x; a, b/(k + b)).  We use this posterior distribution to model consumption for k days.
+This is the posterior probability distribution for one occurrence in the time scale of $\lambda$, which is **one day**. We assume that for $H$ days, parameters $a$ and $b$ of the gamma prior do not change. Following this, to forecast consumption over a horizon of $H$ days, we exploit a key property of Poisson processes: **counts scale linearly with exposure time**. If daily usage follows a Poisson process with rate $\lambda$, then the total count over $H$ days follows a Poisson distribution with mean $\lambda \cdot H$. However, the variability of $\lambda$ is already captured by the gamma prior. 
+
+This allows the posterior distribution of consumption to be extended to $H$ days by: 
+
+$Y_{future} \sim NegBinom(x ~|~ size = a,~prob = \frac{b} {H ~+~ b})$
+
+We use this posterior predictive distribution to model consumption for $H$ days.
 
 Since there is a closed-form expression for the posterior probability distribution, the Gamma distribution is called the **Conjugate Prior** of the Poisson Distribution.
 
-For the priors for a and b, we will derive empirical Bayes priors from the data, which are simply median(weekly consumption) for a and median(days per observation) for b.
+For the priors for $a$ and $b$, we will derive empirical Bayes priors from the data, which are simply $Median(days~per~observation)$ for $b$ and $\frac {Median(weekly~consumption)} {Prior(b)}$ for $a$. 
 
-Due to the posterior having a closed-form expression, the posterior update reduces into **simple parameter update rules** - parameter a: a_prior + sum(consumption), parameter b: b_prior + sum(days)
+Due to the posterior having a closed-form expression, the posterior update reduces into **simple parameter update rules**:  
+Gamma Parameters:  
+$a = a_{prior} ~+~ \Sigma(consumption)$  
+$b = b_{prior} ~+~ \Sigma(days)$  
+  
+Negative Binomial Posterior Predictive Parameters:  
+  
+$size = a$  
+$prob = \frac {b} {b ~+~ Forecast~Days~(H)}$  
 
 The Negative Binomial distribution exhibits properties such as right-tailed distribution, overdispersion in the random variable (variance is greater than the mean), and the variance and mean have a quadratic relationship.
 
@@ -51,7 +65,14 @@ The next section is the exploratory data analysis to assess the suitability of t
 
 # Libraries
 
-```{r, warning=FALSE, message=FALSE}
+```{r}
+
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
+
+```
+
+
+```{r, echo=TRUE}
 
 library(readxl)
 library(dplyr)
@@ -61,14 +82,16 @@ library(stats)
 library(patchwork)
 library(geomtextpath)
 
+source("utils.R")
+
 set.seed(42)
 
 ```
 
 
-# Data Loading and Feature Engineering
+# Exploratory Data Analysis
 
-The raw data contains mock weekly stock counts that mimic the inventory data I encountered in a real world QC environment. The materials are high cost and have expiry windows of a few months.
+The raw data contains mock weekly stock counts that mimic inventory data inspired from a real world biotech QC environment. The materials are high cost and have short expiry windows.
 
 ```{r}
 
@@ -90,24 +113,23 @@ import_data <- import_data%>%
 
 ```
 
-```{r}
+```{r, echo=TRUE}
 
 head(import_data)
 
 ```
 
 
-The raw data originally contained only the Material Name, Weekly Stock Count, and Expiration Date (not shown). I have hidden expiration dates to respect data privacy.
+The raw data originally contained only the Material Name, Weekly Stock Count, and Expiration Date (not shown). Expiration dates are hidden to respect data privacy.
 
 However, to make any forecast, the units used in week is required. 
-For this, I wrote an **external Excel VBA script** that calculates the weekly units used **y** for all materials using combinations of checks such as:
+For this, an **external Excel VBA script** written externally that calculates the weekly units used **y** for all materials using combinations of checks such as:
 1. Was restock performed in given week?
 2. Is there expiry information available for the material in given week and previous week?
 3. Did any units expire in previous week?
 
 From this, all the other metrics in the data were calculated.
 
-# Exploratory Data Analysis
 
 ## Data Visualization
 
@@ -149,60 +171,9 @@ The distribution of weekly use is right-tailed for both materials. There also is
 
 ## Mean-Variance analysis of rolling windows
 
-For any forecasting approach, we usually use rolling windows of the data to train the model. I wanted to assess the drift of mean and the variance of different rolling windows across the data. 
+For forecasting, rolling window analysis is a powerful method that can reveal trends in the data. Here, the drift of mean and the variance of different rolling windows are analyzed. 
 
-```{r}
 
-analyze_variance_mean <- function(data, window=8) {
-  
-  y <- data$y
-  rolling_stats <- data.frame()
-  
-  for (i in window:length(y)) {
-    train_data <- y[(i - window + 1):i]
-    rolling_stats <- rbind(rolling_stats, data.frame(
-      time_point = i,
-      rolling_mean=mean(train_data),
-      rolling_var=var(train_data),
-      rolling_ratio=var(train_data)/mean(train_data)
-    ))
-  }
-  
-  par(mfrow=c(1,2))
-  
-  plot(rolling_stats$rolling_mean, rolling_stats$rolling_var,
-       main="Variance-Mean relationship",
-       xlab="Rolling Mean", ylab="Rolling Variance")
-  
-  if (nrow(rolling_stats) > 3) {
-    lm_fit <- lm(rolling_var ~ rolling_mean, data=rolling_stats)
-    abline(lm_fit, col="red")
-    quad_fit <- lm(rolling_var ~ rolling_mean + I(rolling_mean^2), data=rolling_stats)
-    print(summary(quad_fit))
-    pred_vals <- predict(quad_fit, newdata=data.frame(rolling_mean = sort(rolling_stats$rolling_mean)))
-    lines(pred_vals ~ sort(rolling_stats$rolling_mean))
-  }
-  
-  
-  plot(rolling_stats$time_point, rolling_stats$rolling_ratio,
-       main="Var/Mean Ratio over Time (Weeks)",
-       xlab="Week", ylab="Ratio")
-  
-  title(data$material[[1]], side = 3, line=-1, outer = TRUE)
-  
-  par(mfrow=c(1,1))
-  
-  mean_rolling_ratio <- mean(rolling_stats$rolling_ratio, na.rm=TRUE)
-  sd_rolling_ratio <- sd(rolling_stats$rolling_ratio, na.rm=TRUE)
-  ratio_cv <- sd_rolling_ratio / mean_rolling_ratio
-  
-  cat("ratio_cv: ", ratio_cv, "\n")
-  
-  return(rolling_stats)
-  
-}
-
-```
 
 ```{r, warning=FALSE}
 
@@ -216,30 +187,24 @@ for(m in unique(import_data$material)) {
 
 There is a positive correlation between mean and variance for both materials. In Material1, there is a plausible quadratic fit for the mean-variance relationship, whereas in Material2, the plausibility of the quadratic fit diminishes, although there is a positive correlation visually. The ratio of variance and mean appears to vary across the data for both materials and reaches high values in a large proportion of rolling windows. 
 
-In summary, we observed that: 
+In summary: 
 1. Weekly usage distributions are right-tailed.
 2. There is positive correlation between restock cycle length and total number of units used per cycle.
 3. Usage is overdispersed within rolling windows.
 4. Window usage mean is positively correlated with window usage variance.
 
-This indicates that the *Poisson-Gamma mix model* can be used to model the weekly use.
+This indicates that the **Poisson-Gamma conjugate model** can be used to model the weekly use.
 
-Therefore, *Weekly Use (y) ~ NegBinom(size, prob)*
-
-The posterior parameter update rules become simplified into: 
-size = Prior for Size + sum(Weekly Use)
-prob = Prior for Duration / (Prior for Duration + Forecast Duration)
-
-The Prior for size parameter is chosen as the median of the weekly use, and the Prior for prob parameter is chosen as the median of the length of one inventory period, which is typically 7 days.
+The Prior the Prior for Gamma rate parameter is chosen as the median of the length of one inventory period, which is typically 7 days and the prior for Gamma shape parameter is chosen as the median of the weekly use / prior for Gamma rate.
 
 
 # Negative Binomial Fit
 
-We now define 4 functions:
+Four functions are designed to perform the negative binomial fit:
 
 1. **fit_nb_model**: This function computes the posterior parameters for the Poisson–Gamma conjugate model, which leads to a Negative Binomial posterior predictive distribution.
 
-Given weekly usage counts (y) and exposure times (n) and empirical Bayes priors derived from the training window, the function returns: a = a0 + sum(y); b = b0 + sum(n)
+Given weekly usage counts (y) and exposure times (n) and empirical Bayes priors (a0, b0) derived from the training window, the function returns: a = a0 + sum(y); b = b0 + sum(n)
 
 These parameters define the posterior distribution of the weekly usage rate and will be used to generate predictive samples.
 
@@ -247,20 +212,22 @@ These parameters define the posterior distribution of the weekly usage rate and 
 
 It draws Monte Carlo samples from:
 
-Y_future ~ NegBinom(size = a, prob = b / (b + H_days))
+$Y_{future} \sim NegBinom(size = a,~ prob = \frac{b}{b ~+~ H_{days}})$
 
 This distribution represents all plausible future usages consistent with past data.
 The function returns: the median predictive consumption and the raw list of predictive samples (for use in decision-making)
 
 3. **choose_restock_quantity**: This function transforms the predictive distribution into an operational decision.
 
-For a grid of possible inventory stock levels Q, it computes the expected waste fraction:
+For a grid of possible inventory stock levels $Q$, it computes the expected waste fraction:
 
-Expected Waste Fraction(Q) = E[max(Q - Y, 0)] / Q, where Y are the predictive samples.
+$Expected~Waste~Fraction(Q) = \frac {E[max(Q ~-~ Y, ~0)]} {Q}$ , where $Y$ are the predictive samples.
 
-The function identifies all Q values where: Expected Waste Fraction(Q) <= Waste Threshold
+The function identifies all $Q$ values where: 
 
-From these, it selects the maximum feasible stock level, i.e., the largest Q that still keeps expected waste below the threshold.
+$Expected~Waste~Fraction(Q) \leq Waste Threshold$
+
+From these, it selects the maximum feasible stock level, i.e., the largest $Q$ that still keeps expected waste below the threshold.
 
 This separates forecasting (uncertainty modeling) from decision-making (choosing stock under business constraints).
 
@@ -275,164 +242,6 @@ v. Store posteriors, predicted, actual, residuals.
 
 This produces a full time-series evaluation of both predictive performance, decision performance and illustrates how forecasting behaves under real operational variability.
 
-## Functions
-
-```{r}
-
-fit_nb_model <- function(train_data, level_weights=FALSE) {
-  
-  y <- train_data$y
-  total <- train_data$stock
-  n <- train_data$n
-  
-  b0 <- median(n); a0 <- median(y) / b0
-  
-  if (level_weights==FALSE) {
-    a <- a0 + sum(y); b <- b0 + sum(n)
-  } else {
-    
-    var_mean_ratio <- var(y) / mean(y)
-    
-    if (var_mean_ratio > 3) {
-      effective_y_idx <- (y >= quantile(y, 0.10) & (y <= quantile(y, 0.90)))
-      effective_y <- y[effective_y_idx]
-      effective_n <- n[effective_y_idx]
-    } else {
-      
-      effective_y <- y
-      effective_n <- n
-    }
-    
-    a <- a0 + sum(effective_y)
-    b <- b0 + sum(effective_n)
-    
-  }
-  
-  return(list(
-    a = a,
-    b = b
-  ))
-  
-}
-
-```
-
-```{r}
-
-predict_consumption_nb <- function(train_data, H_days, Nmc=5000, level_weights=FALSE) {
-  
-  predictions <- numeric(Nmc)
-  
-  train <- fit_nb_model(train_data=train_data, level_weights=level_weights)
-  predictions <- rnbinom(Nmc, size=train$a, prob=train$b / (train$b + H_days))
-  expected_demand <- median(predictions)
-  prediction_error <- mad(predictions)
-  
-  return(list(expected_demand = expected_demand,
-              prediction_error = prediction_error,
-              predictions = predictions))
-  
-}
-
-```
-
-```{r}
-
-choose_restock_quantity <- function(pred_samples,
-                                    waste_frac_max = 0.15,
-                                    Q_min = NULL,
-                                    Q_max = NULL,
-                                    step = 1) {
-
-  if (is.null(Q_min)) Q_min <- quantile(pred_samples, 0.1)
-  if (is.null(Q_max)) Q_max <- quantile(pred_samples, 0.95) * 2.0
-  
-  Q_grid <- seq(Q_min, Q_max, by = step)
-  
-  waste_frac <- sapply(Q_grid, function(Q) {
-    expected_waste <- mean(pmax(Q - pred_samples, 0))
-    expected_waste / Q
-  })
-  
-  ok_idx <- which(waste_frac <= waste_frac_max)
-  
-  if (length(ok_idx) == 0) {
-    return(list(
-      Q = median(pred_samples),
-      waste_frac = NA,
-      Q_grid = Q_grid,
-      waste_frac_grid = waste_frac
-    ))
-  }
-  
-  best_Q <- Q_grid[max(ok_idx)]
-  
-  list(
-    Q = best_Q,
-    Q_grid = Q_grid,
-    waste_frac_grid = waste_frac
-  )
-}
-
-```
-
-```{r}
-
-cross_validate_nb <- function(data, H_days, train_window, step=3, Nmc=1000, level_weights=FALSE, waste_frac_max=0.15) {
-  
-  test_window <- floor(H_days/ 7)
-  
-  forecast_date <- c(); actual_consumed <- c(); prediction <- c(); residual <- c();
-  mean_data <- c(); var_data <- c(); var_mean_ratio <- c(); posteriors <- c()
-  
-  for (i in seq(from=1, to=(nrow(data) - train_window - test_window), by=step)) {
-    train_data <- data[i:(i + train_window - 1), ]
-    test_data <- data[(i + train_window):(i + train_window + test_window - 1), ]
-    
-    actual_consumed_i <- sum(test_data$y)
-    
-    predict <- predict_consumption_nb(train_data=train_data, H_days=H_days, Nmc=Nmc, level_weights=level_weights)
-    decision <- choose_restock_quantity(pred_samples = predict$predictions, waste_frac_max=waste_frac_max)
-    
-    predict_i <- decision$Q
-    residual_i <- actual_consumed_i - predict_i
-    mean_data_i <- mean(train_data$y)
-    var_data_i <- var(train_data$y)
-    var_mean_ratio_i <- var_data_i / mean_data_i
-    
-    plot_df_i <- data.frame(predict=predict$predictions)
-    
-    posterior_i <- predict$predictions
-    
-    forecast_date <- c(tail(train_data$date, 1), forecast_date)
-    actual_consumed <- c(actual_consumed_i, actual_consumed)
-    prediction <- c(predict_i, prediction)
-    residual <- c(residual_i, residual)
-    mean_data <- c(mean_data_i, mean_data)
-    var_data <- c(var_data_i, var_data)
-    var_mean_ratio <- c(var_mean_ratio_i, var_mean_ratio)
-    posteriors <- rbind(posteriors, posterior_i)
-      
-  }
-  
-  results_df <- data.frame(
-    forecast_date = forecast_date,
-    actual_consumed = actual_consumed,
-    prediction = prediction,
-    residual = residual,
-    mean_data = mean_data,
-    var_data = var_data,
-    var_mean_ratio = var_mean_ratio
-  )
-  
-  results_df <- results_df%>%arrange(forecast_date)
-  
-  return(list(results_df=results_df, posteriors=posteriors))
-  
-}
-
-
-```
 
 # Rolling-Origin Evaluation of Forecast
 
@@ -442,7 +251,7 @@ Rolling-origin evaluation is a standard validation technique used in time-series
 
 ### Rolling-Origin Evaluation
 
-```{r}
+```{r, echo=TRUE}
 
 cross_validate_material1_object <- cross_validate_nb(data=import_data%>%filter(material=='Material1'), H_days=50, train_window=8, step=1, Nmc=1000, level_weights=FALSE, waste_frac_max=0.15)
 
@@ -501,7 +310,7 @@ high_residual_rows_material1 <- sample(x=(cross_validate_material1%>%filter(abs(
 
 high_residual_plots_material1 <- lapply(high_residual_rows_material1, function(i) {
   
-  plot_df <- data.frame(posterior=cross_validate_material1_object$posteriors[i, ])
+  plot_df <- data.frame(posterior=cross_validate_material1_object$posteriors[[i]])
   predicted_value <- cross_validate_material1$prediction[i]
   actual_value <- cross_validate_material1$actual_consumed[i]
   
@@ -532,7 +341,7 @@ Randomly sampled posteriors of high residual predictions show that the actual va
 
 ### Rolling-Origin Evaluation
 
-```{r}
+```{r, echo=TRUE}
 
 cross_validate_material2_object <- cross_validate_nb(import_data%>%filter(material=='Material2'), H_days=50, train_window=8, step=1, Nmc=1000, level_weights=TRUE, waste_frac_max=0.15)
 
@@ -590,7 +399,7 @@ high_residual_rows_material2 <- sample(x=(cross_validate_material2%>%filter(abs(
 
 high_residual_plots_material2 <- lapply(high_residual_rows_material2, function(i) {
   
-  plot_df <- data.frame(posterior=cross_validate_material2_object$posteriors[i, ])
+  plot_df <- data.frame(posterior=cross_validate_material2_object$posteriors[[i]])
   predicted_value <- cross_validate_material2$prediction[i]
   actual_value <- cross_validate_material2$actual_consumed[i]
   
@@ -619,5 +428,6 @@ Randomly sampled posteriors of high residual points show that the actual values 
 
 # Lessons Learned
 
-The Bayesian Analysis did not produce stable decision-grade forecasts under these constraints. The analysis shows that the inherent variability in usage is not  well captured by a single stochastic process defined by fixed priors and likelihood, even with an overdispersed posterior such as negative binomial.
-The critical insight I learned is that **some processes are more suited to be managed primarily using human oversight** rather than quantitative analysis. This approach also aligned with the preferred operational method of the team.
+The Bayesian Analysis did not produce stable decision-grade forecasts under these constraints. The analysis shows that the inherent variability in usage is not  well captured by a single stochastic process defined by fixed priors and likelihood, even with an overdispersed posterior such as negative binomial. This analysis revealed extent of complexity in the consumption process.
+
+The critical insight is that **some processes are more suited to be managed primarily using human oversight with timely communication** rather than pure quantitative analysis.
