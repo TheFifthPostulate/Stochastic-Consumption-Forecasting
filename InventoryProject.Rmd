@@ -21,44 +21,35 @@ Bayesian analysis involves representing a stochastic process (random process) us
 
 In this case, the nature of my inventory data is **Count Data**. Count data is fundamentally modeled using the **Poisson Distribution** as the likelihood function:
 
-$P(x~|~\lambda) = \frac{\lambda^x} {x!} ~ e^{-\lambda}$
+$(y~|~\lambda, ~n_{t}) \sim Poisson(\lambda \cdot n_{t})$
 
-where $x$ is the count for one time period, $\lambda$ is the rate for one time period. In this problem, $\lambda$ is the daily usage which is assumed to be constant for a given week and the counts produced are weekly. 
+where $y$ is the consumption for $n_{t}$ days (exposure), and $\lambda$ is the rate for daily count. 
 
 However, the underlying usage changes every week. So, $\lambda$ is assumed to follow the **Gamma Distribution**:
 
-$p(\lambda~|~shape = a,~rate = b) = \frac {b^a} {\Gamma(a)} ~ \lambda^{(a~-~1)} ~ e^{-b\lambda}$
+$(\lambda~|~a,~b) \sim Gamma(shape = a, ~rate=b)$
 
-where $a$ is the shape parameter and $b$ is the rate parameter.
+With a Poisson Likelihood for the weekly consumption $y$ and Gamma Posterior for $\lambda$ with priors $a_{prior}$ for shape and $b_{prior}$ for rate and we obtain a **closed-form expression** for the **Posterior Predictive Distribution** of consumption $Y$, which is the **Negative Binomial Distribution**: 
 
-Here, the Gamma Distribution is the **prior** we assume for the lambda parameter of the Poisson likelihood.
+$Y \sim NegativeBinomial(x~|~size = a_{prior},~prob = \frac {b_{prior}} {1 ~+~ b_{prior}})$ 
 
-With a Poisson Likelihood and Gamma Prior we obtain a **closed-form expression** for the **Posterior Predictive Distribution** of consumption $Y$, which is the **Negative Binomial Distribution**: 
+This is the posterior predictive distribution of consumption $Y$ for **one day**. Exploiting the property of Poisson processes that *counts scale linearly with exposure time*, the posterior predictive distribution of consumption $Y$ can be extended to $H$ days by: 
 
-$Y \sim NegBinom(x~|~size = a,~prob = \frac {b} {1 ~+~ b})$ 
-
-This is the posterior probability distribution for one occurrence in the time scale of $\lambda$, which is **one day**. We assume that for $H$ days, parameters $a$ and $b$ of the gamma prior do not change. Following this, to forecast consumption over a horizon of $H$ days, we exploit a key property of Poisson processes: **counts scale linearly with exposure time**. If daily usage follows a Poisson process with rate $\lambda$, then the total count over $H$ days follows a Poisson distribution with mean $\lambda \cdot H$. However, the variability of $\lambda$ is already captured by the gamma prior. 
-
-This allows the posterior distribution of consumption to be extended to $H$ days by: 
-
-$Y_{future} \sim NegBinom(x ~|~ size = a,~prob = \frac{b} {H ~+~ b})$
-
-We use this posterior predictive distribution to model consumption for $H$ days.
-
-Since there is a closed-form expression for the posterior probability distribution, the Gamma distribution is called the **Conjugate Prior** of the Poisson Distribution.
-
-For the priors for $a$ and $b$, we will derive empirical Bayes priors from the data, which are simply $Median(days~per~observation)$ for $b$ and $\frac {Median(weekly~consumption)} {Prior(b)}$ for $a$. 
-
-Due to the posterior having a closed-form expression, the posterior update reduces into **simple parameter update rules**:  
-Gamma Parameters:  
-$a = a_{prior} ~+~ \Sigma(consumption)$  
-$b = b_{prior} ~+~ \Sigma(days)$  
+$Y_{future} \sim NegativeBinomial(x ~|~ size = a_{prior},~prob = \frac{b_{prior}} {H ~+~ b_{prior}})$  
   
-Negative Binomial Posterior Predictive Parameters:  
-  
-$size = a$  
-$prob = \frac {b} {b ~+~ Forecast~Days~(H)}$  
+Since there is a closed-form expression for the posterior predictive distribution, the Gamma distribution is called the **Conjugate Prior** of the Poisson Distribution.  
 
+The shape and rate parameters for the Gamma posterior of $\lambda$ can be updated with new data using the following simple posterior update rules:
+
+$a = a_{prior} ~+~ \Sigma(weekly~consumption)$  
+$b = b_{prior} ~+~ \Sigma(days~per~observation)$ 
+  
+The new posterior predictive distribution for consumption $Y$ for H days will then be:  
+  
+$Y_{future} \sim NegativeBinomial(size = a, ~prob = \frac {b} {b ~+~ H})$  
+  
+The initial priors $a_{prior}$ and $b_{prior}$ for shape and rate of the initial Gamma posterior of $\lambda$ can be calculated as empirical Bayes priors from initial data, which are simply $Median(days~per~observation)$ for rate and $\frac {Median(weekly~consumption)} {Median(days~per~observation)}$ for shape.   
+  
 The Negative Binomial distribution exhibits properties such as right-tailed distribution, overdispersion in the random variable (variance is greater than the mean), and the variance and mean have a quadratic relationship.
 
 The next section is the exploratory data analysis to assess the suitability of the Poisson-Gamma Mix Model for this dataset.
@@ -195,7 +186,7 @@ In summary:
 
 This indicates that the **Poisson-Gamma conjugate model** can be used to model the weekly use.
 
-The Prior the Prior for Gamma rate parameter is chosen as the median of the length of one inventory period, which is typically 7 days and the prior for Gamma shape parameter is chosen as the median of the weekly use / prior for Gamma rate.
+The Prior for Gamma rate parameter is chosen as the median of the length of one inventory period, which is typically 7 days and the prior for Gamma shape parameter is chosen as the median of the weekly use / prior for Gamma rate.
 
 
 # Negative Binomial Fit
