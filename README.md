@@ -6,7 +6,7 @@ A concise methods note summarizing the modeling approach, decision logic, and em
 
 **[Download PDF: Decision-Aware Stochastic Consumption Forecasting Under Covariate Scarcity](methods_note_jprakash_jan2026.pdf)**
 
-The full reproducible analysis, figures, and diagnostics are available in the notebook:
+Detailed mathematical background, descriptions of functions used, and analysis of plots are available in the R Notebook:
 
 **[View Notebook (HTML)](https://thefifthpostulate.github.io/Stochastic-Consumption-Forecasting/InventoryProject.html)**
 
@@ -14,5 +14,7 @@ Key takeaways:
 - Uncertainty modeling revealed structural complexity in real consumption processes.
 - Model and decision-rule assumptions were insufficient for consistent decision-grade forecasting.
 - Expert oversight and communication outperformed automated inventory control under nonstationarity.
+
+Full reproducible code available upon request.
 
 This work is licensed under CC BY-NC-ND 4.0
