@@ -14,3 +14,5 @@ Key takeaways:
 - Uncertainty modeling revealed structural complexity in real consumption processes.
 - Model and decision-rule assumptions were insufficient for consistent decision-grade forecasting.
 - Expert oversight and communication outperformed automated inventory control under nonstationarity.
+
+This work is licensed under CC BY-NC-ND 4.0
